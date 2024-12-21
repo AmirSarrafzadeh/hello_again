@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hello Again - Loyalty App</title>
+    <style>
+        /* General Styles */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* Header Styles */
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        /* Navigation Styles */
+        nav {
+            background-color: #333;
+            overflow: hidden;
+        }
+
+        nav a {
+            float: left;
+            display: block;
+            color: white;
+            text-align: center;
+            padding: 14px 20px;
+            text-decoration: none;
+        }
+
+        nav a:hover {
+            background-color: #575757;
+            color: white;
+        }
+
+        /* Main Content Styles */
+        .hero {
+            background-color: #f4f4f4;
+            padding: 50px 20px;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+
+        .hero p {
+            font-size: 1.2em;
+            margin-bottom: 30px;
+        }
+
+        .hero button {
+            padding: 10px 20px;
+            font-size: 1em;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .hero button:hover {
+            background-color: #45a049;
+        }
+
+        .features {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            padding: 20px;
+            flex-grow: 1; /* Allows this section to take up remaining space */
+        }
+
+        .feature {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 5px;
+            margin: 5px;
+            width: 250px;
+            text-align: center;
+            height: 100px;
+        }
+
+        .feature h3 {
+            margin-top: 0;
+        }
+
+        /* Footer Styles */
+        footer {
+            background-color: #333;
+            color: white;
+            text-align: center;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <h1>Welcome to Hello Again</h1>
+    <p>Loyalty App for a Better Customer Experience</p>
+</header>
+<nav>
+    <a href="/">Home</a>
+    <a href="/entries/">Entries</a>
+    <a href="/api/docs">API Docs</a>
+    <a href="/admin/">Admin</a>
+</nav>
+<section class="hero">
+    <h1>Your Loyalty, Our Priority</h1>
+    <p>Discover how the Hello Again Loyalty App makes managing customer relationships easy and efficient.</p>
+    <button onclick="location.href='/api/test'">Test the API</button>
+    <button onclick="location.href='/entries/'">View Entries</button>
+</section>
+<section class="features">
+    <div class="feature">
+        <h3>Dynamic Filtering</h3>
+        <p>Easily filter customer data to find exactly what you need.</p>
+    </div>
+    <div class="feature">
+        <h3>Seamless Integration</h3>
+        <p>Works with robust APIs for better data handling.</p>
+    </div>
+    <div class="feature">
+        <h3>Comprehensive Insights</h3>
+        <p>Get detailed reports on customer relationships and activity.</p>
+    </div>
+</section>
+<footer>
+    <p>&copy; 2024 Hello Again Loyalty App. All rights reserved.</p>
+    <p>&copy; Developed with ❤️ by Amir.
+        <a href="https://github.com/AmirSarrafzadeh" target="_blank" style="color: orange;">GitHub</a>
+    </p>
+</footer>
+</body>
+</html>
