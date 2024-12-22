@@ -8,9 +8,9 @@ push:
 	@echo "Creating requirements.txt"
 	pip freeze > requirements.txt
 	@echo "Pushing to git"
-	git add *.*
-	git commit -m "Update `date +'%Y/%m/%d %H:%M:%S'`"
-	git push
+#	git add *.*
+#	git commit -m "Update `date +'%Y/%m/%d %H:%M:%S'`"
+#	git push
 
 # pull from git
 pull:

@@ -39,6 +39,7 @@ def home(request):
 urlpatterns = [
     path('admin/', admin.site.urls),  # Admin panel
     path('entries', list_entries, name='list_entries'),  # API endpoint for listing entries
+    path('api/entries', list_entries, name='list_entries'),  # API endpoint for listing entries
     path('api/', api.urls),  # Ninja API endpoints
     path('', home, name='home'),  # Root path with a welcome message
     re_path(r'^favicon\.ico$', favicon_view),

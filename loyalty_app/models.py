@@ -47,10 +47,10 @@ class AppUser(models.Model):
     gender = models.CharField(max_length=6, choices=GENDER_CHOICES)
     customer_id = models.CharField(max_length=50, unique=True)
     phone_number = models.CharField(max_length=40, unique=True)
-    created = models.DateTimeField(blank=True, null=True)
+    created = models.DateTimeField(null=False)
     address = models.ForeignKey(Address, on_delete=models.CASCADE)
-    birthday = models.DateField(blank=True, null=True)
-    last_updated = models.DateTimeField(blank=True, null=True)
+    birthday = models.DateField(null=False)
+    last_updated = models.DateTimeField(null=False)
 
     class Meta:
         db_table = 'appuser'
@@ -60,8 +60,8 @@ class AppUser(models.Model):
 class CustomerRelationship(models.Model):
     appuser = models.ForeignKey(AppUser, on_delete=models.CASCADE)
     points = models.IntegerField()
-    created = models.DateTimeField(blank=True, null=True)
-    last_activity = models.DateTimeField(blank=True, null=True)
+    created = models.DateTimeField(null=False)
+    last_activity = models.DateTimeField(null=False)
 
     class Meta:
         db_table = 'customerrelationship'

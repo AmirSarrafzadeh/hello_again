@@ -41,6 +41,7 @@ This function can be used in a CRM-like application where administrators need to
 import os
 import logging
 from pathlib import Path
+from django.utils.dateparse import parse_date
 from django.db.models import Prefetch
 from django.http import JsonResponse
 from django.core.paginator import Paginator
@@ -64,27 +65,86 @@ file_handler.setFormatter(formatter)
 
 # Add handler to logger
 logger.addHandler(file_handler)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
+
+ALLOWED_PARAMETERS = {
+    "page",
+    "page_size",
+    "sort_by",
+    "order",
+    "id",
+    "first_name",
+    "last_name",
+    "gender",
+    "customer_id",
+    "phone_number",
+    "appuser_created",
+    "appuser_created_after",
+    "appuser_created_before",
+    "birthday",
+    "last_updated",
+    "last_updated_after",
+    "last_updated_before",
+    "address_id",
+    "street",
+    "street_number",
+    "city_code",
+    "city",
+    "country",
+    "relationship_id",
+    "points",
+    "relationship_created",
+    "relationship_created_after",
+    "relationship_created_before",
+    "last_activity",
+    "last_activity_after",
+    "last_activity_before",
+}
+
+
+# Helper function to get all fields from a model
+def get_model_fields(model):
+    return [field.name for field in model._meta.get_fields()]
+
+
+# Get all field names for sorting validation
+appuser_fields = get_model_fields(AppUser)
+address_fields = [f"address__{field}" for field in get_model_fields(Address)]
+customerrelationship_fields = [f"customerrelationship__{field}" for field in get_model_fields(CustomerRelationship)]
+
+# Combine all field names for validation
+all_sortable_fields = appuser_fields + address_fields + customerrelationship_fields
 
 
 def list_entries(request):
     """
     Lists entries from AppUser, Address, and CustomerRelationship.
-    Includes filtering, sorting, and pagination with support for date filters and exact date queries.
+    Includes filtering, sorting, and pagination with support for dynamic filters and date queries.
     """
     logger.info("Incoming request to entries endpoint with parameters: %s", request.GET.dict())
+
+    # Validate query parameters
+    unexpected_parameters = [param for param in request.GET if param not in ALLOWED_PARAMETERS]
+    if unexpected_parameters:
+        logger.error("Unexpected parameters: %s", unexpected_parameters)
+        return JsonResponse(
+            {"error": f"Invalid parameters: {', '.join(unexpected_parameters)}"}, status=400
+        )
 
     try:
         # Extract filter and sort parameters
         filters = {key: value for key, value in request.GET.items() if
-                   key not in ["sort_by", "order", "page", "page_size",
-                               "created", "created_after", "created_before",
-                               "last_updated", "last_updated_after", "last_updated_before",
-                               "last_activity", "last_activity_after", "last_activity_before"]}
+                   key not in ["sort_by", "order", "page", "page_size"]}
         sort_by = request.GET.get("sort_by", "id")
         order = request.GET.get("order", "asc")
         page = int(request.GET.get("page", 1))
         page_size = int(request.GET.get("page_size", 10))
+
+        # Validate the sort field
+        if sort_by not in all_sortable_fields:
+            logger.error("Invalid sort_by field: %s", sort_by)
+            return JsonResponse({"error": f"Invalid sort_by field: {sort_by}"}, status=400)
+
         logger.info("Parameters extracted successfully")
     except ValueError:
         logger.error("Invalid query parameters")
@@ -95,70 +155,133 @@ def list_entries(request):
         sort_by = f"-{sort_by}"
 
     # Build the base queryset
-    queryset = AppUser.objects.select_related("address").prefetch_related(
-        Prefetch("customerrelationship_set")
-    )
+    queryset = AppUser.objects.select_related("address").prefetch_related("customerrelationship_set")
 
-    # Apply filtering dynamically with case-insensitive exact match and date filters
+    logger.error("Queryset: %s", str(queryset.query))
+
     try:
-        # Standard filters
         for field, value in filters.items():
-            if hasattr(AppUser, field):  # Check if AppUser has the field
+            if field == "address_id":  # Specific handling for address_id
+                queryset = queryset.filter(address__id=value)
+                logger.debug("Filtering by Address ID: %s", value)
+            elif hasattr(AppUser, field):  # Filter for AppUser fields
                 queryset = queryset.filter(**{f"{field}__iexact": value})
                 logger.debug("Filtering AppUser by %s: %s", field, value)
-            elif hasattr(Address, field):  # Check if the Address has the field
+            elif hasattr(Address, field):  # Filter for Address fields
                 queryset = queryset.filter(**{f"address__{field}__iexact": value})
                 logger.debug("Filtering Address by %s: %s", field, value)
-            elif hasattr(CustomerRelationship, field):  # Check if CustomerRelationship has the field
+            elif field == "relationship_id":  # Specific handling for relationship_id
+                queryset = queryset.filter(customerrelationship__id=value)  # Use related ForeignKey
+                logger.debug("Filtering by Relationship ID: %s", value)
+            elif hasattr(CustomerRelationship, field):  # Filter for CustomerRelationship fields
                 queryset = queryset.filter(**{f"customerrelationship__{field}__iexact": value})
                 logger.debug("Filtering CustomerRelationship by %s: %s", field, value)
-
-        # Date filters: Exact and Ranges
-        created = request.GET.get("created")
-        created_after = request.GET.get("created_after")
-        created_before = request.GET.get("created_before")
-        if created:
-            queryset = queryset.filter(created=created)
-            logger.debug("Filtering by exact created date: %s", created)
-        if created_after:
-            queryset = queryset.filter(created__gte=created_after)
-            logger.debug("Filtering by created_after: %s", created_after)
-        if created_before:
-            queryset = queryset.filter(created__lte=created_before)
-            logger.debug("Filtering by created_before: %s", created_before)
-
-        last_updated = request.GET.get("last_updated")
-        last_updated_after = request.GET.get("last_updated_after")
-        last_updated_before = request.GET.get("last_updated_before")
-        if last_updated:
-            queryset = queryset.filter(last_updated=last_updated)
-            logger.debug("Filtering by exact last_updated date: %s", last_updated)
-        if last_updated_after:
-            queryset = queryset.filter(last_updated__gte=last_updated_after)
-            logger.debug("Filtering by last_updated_after: %s", last_updated_after)
-        if last_updated_before:
-            queryset = queryset.filter(last_updated__lte=last_updated_before)
-            logger.debug("Filtering by last_updated_before: %s", last_updated_before)
-
-        last_activity = request.GET.get("last_activity")
-        last_activity_after = request.GET.get("last_activity_after")
-        last_activity_before = request.GET.get("last_activity_before")
-        if last_activity:
-            queryset = queryset.filter(customerrelationship__last_activity=last_activity)
-            logger.debug("Filtering by exact last_activity date: %s", last_activity)
-        if last_activity_after:
-            queryset = queryset.filter(customerrelationship__last_activity__gte=last_activity_after)
-            logger.debug("Filtering by last_activity_after: %s", last_activity_after)
-        if last_activity_before:
-            queryset = queryset.filter(customerrelationship__last_activity__lte=last_activity_before)
-            logger.debug("Filtering by last_activity_before: %s", last_activity_before)
-
     except Exception as e:
         logger.error("Error applying filters: %s", e)
         return JsonResponse({"error": "Error applying filters"}, status=400)
 
     try:
-        # Apply sorting
+        # Filter by CustomerRelationship ID
+        relationship_id = request.GET.get("relationship_id")
+        if relationship_id:
+            queryset = queryset.filter(customerrelationship__id=relationship_id)
+            logger.debug("Filtering by CustomerRelationship ID: %s", relationship_id)
+
+        # Separate filtering for AppUser's `created`
+        appuser_created = request.GET.get("appuser_created")
+        appuser_created_after = request.GET.get("appuser_created_after")
+        appuser_created_before = request.GET.get("appuser_created_before")
+
+        if appuser_created:
+            appuser_created_date = parse_date(appuser_created)
+            if appuser_created_date:
+                queryset = queryset.filter(created__date=appuser_created_date)
+                logger.debug("Filtering AppUser by exact created date: %s", appuser_created_date)
+        if appuser_created_after:
+            appuser_created_after_date = parse_date(appuser_created_after)
+            if appuser_created_after_date:
+                queryset = queryset.filter(created__date__gte=appuser_created_after_date)
+                logger.debug("Filtering AppUser by created_after date: %s", appuser_created_after_date)
+        if appuser_created_before:
+            appuser_created_before_date = parse_date(appuser_created_before)
+            if appuser_created_before_date:
+                queryset = queryset.filter(created__date__lte=appuser_created_before_date)
+                logger.debug("Filtering AppUser by created_before date: %s", appuser_created_before_date)
+
+        # Separate filtering for CustomerRelationship's `created`
+        relationship_created = request.GET.get("relationship_created")
+        relationship_created_after = request.GET.get("relationship_created_after")
+        relationship_created_before = request.GET.get("relationship_created_before")
+
+        date_filters = {}
+        if relationship_created:
+            relationship_created_date = parse_date(relationship_created)
+            if relationship_created_date:
+                queryset = queryset.filter(customerrelationship__created__date=relationship_created_date)
+                logger.debug("Filtering CustomerRelationship by exact created date: %s", relationship_created_date)
+        if relationship_created_after:
+            relationship_created_after_date = parse_date(relationship_created_after)
+            if relationship_created_after_date:
+                date_filters['customerrelationship__created__date__gte'] = relationship_created_after_date
+                logger.debug("Filtering CustomerRelationship by created_after date: %s",
+                             relationship_created_after_date)
+        if relationship_created_before:
+            relationship_created_before_date = parse_date(relationship_created_before)
+            if relationship_created_before_date:
+                date_filters['customerrelationship__created__date__lte'] = relationship_created_before_date
+                logger.debug("Filtering CustomerRelationship by created_before date: %s",
+                             relationship_created_before_date)
+
+        # Similarly handle `last_updated` in `AppUser`
+        last_updated = request.GET.get("last_updated")
+        last_updated_after = request.GET.get("last_updated_after")
+        last_updated_before = request.GET.get("last_updated_before")
+
+        if last_updated:
+            last_updated_date = parse_date(last_updated)
+            if last_updated_date:
+                queryset = queryset.filter(last_updated__date=last_updated_date)
+                logger.debug("Filtering by exact last_updated date: %s", last_updated_date)
+        if last_updated_after:
+            last_updated_after_date = parse_date(last_updated_after)
+            if last_updated_after_date:
+                queryset = queryset.filter(last_updated__date__gte=last_updated_after_date)
+                logger.debug("Filtering by last_updated_after date: %s", last_updated_after_date)
+        if last_updated_before:
+            last_updated_before_date = parse_date(last_updated_before)
+            if last_updated_before_date:
+                queryset = queryset.filter(last_updated__date__lte=last_updated_before_date)
+                logger.debug("Filtering by last_updated_before date: %s", last_updated_before_date)
+
+        # Handle `last_activity` in `CustomerRelationship`
+        last_activity = request.GET.get("last_activity")
+        last_activity_after = request.GET.get("last_activity_after")
+        last_activity_before = request.GET.get("last_activity_before")
+
+        if last_activity:
+            last_activity_date = parse_date(last_activity)
+            if last_activity_date:
+                queryset = queryset.filter(customerrelationship__last_activity__date=last_activity_date)
+                logger.debug("Filtering by exact last_activity date: %s", last_activity_date)
+
+        if last_activity_after:
+            last_activity_after_date = parse_date(last_activity_after)
+            if last_activity_after_date:
+                date_filters['customerrelationship__last_activity__date__gte'] = last_activity_after_date
+                logger.debug("Filtering by last_activity_after date: %s", last_activity_after_date)
+        if last_activity_before:
+            last_activity_before_date = parse_date(last_activity_before)
+            if last_activity_before_date:
+                date_filters['customerrelationship__last_activity__date__lte'] = last_activity_before_date
+                logger.debug("Filtering by last_activity_before date: %s", last_activity_before_date)
+
+        queryset = queryset.filter(**date_filters)
+    except Exception as e:
+        logger.error("Error applying filters: %s", e)
+        return JsonResponse({"error": "Error applying filters"}, status=400)
+
+    try:
+        # Apply sorting dynamically
         queryset = queryset.order_by(sort_by)
 
         # Paginate results
