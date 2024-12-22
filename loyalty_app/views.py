@@ -40,9 +40,10 @@ This function can be used in a CRM-like application where administrators need to
 # Import the necessary modules and libraries
 import os
 import logging
+import hashlib
 from pathlib import Path
 from django.utils.dateparse import parse_date
-from django.db.models import Prefetch
+from django.core.cache import cache
 from django.http import JsonResponse
 from django.core.paginator import Paginator
 from logging.handlers import RotatingFileHandler
@@ -102,6 +103,18 @@ ALLOWED_PARAMETERS = {
 }
 
 
+# generate_cache_key function to create a unique cache key for each request based on the query parameters
+def generate_cache_key(request):
+    # Filter out only allowed parameters
+    allowed_params = {k: v for k, v in request.GET.items() if k in ALLOWED_PARAMETERS}
+    sorted_params = sorted(allowed_params.items())
+    params_string = "&".join(f"{k}={v}" for k, v in sorted_params)
+    params_hash = hashlib.md5(params_string.encode('utf-8')).hexdigest()
+
+    # Construct and return the unique cache key
+    return f"entries_{params_hash}"
+
+
 # Helper function to get all fields from a model
 def get_model_fields(model):
     return [field.name for field in model._meta.get_fields()]
@@ -121,6 +134,20 @@ def list_entries(request):
     Lists entries from AppUser, Address, and CustomerRelationship.
     Includes filtering, sorting, and pagination with support for dynamic filters and date queries.
     """
+    try:
+        if request.method != "GET":
+            logger.error("Invalid request method: %s", request.method)
+            return JsonResponse({"error": "Invalid request method"}, status=405)
+        cache_key = generate_cache_key(request)
+        cached_data = cache.get(cache_key)
+
+        if cached_data:
+            logger.info("Returning cached data for cache key: %s", cache_key)
+            return JsonResponse(cached_data)
+    except Exception as e:
+        logger.error("Error generating cache key: %s", e)
+        return JsonResponse({"error": "Error generating cache key"}, status=500)
+
     logger.info("Incoming request to entries endpoint with parameters: %s", request.GET.dict())
 
     # Validate query parameters
@@ -156,8 +183,6 @@ def list_entries(request):
 
     # Build the base queryset
     queryset = AppUser.objects.select_related("address").prefetch_related("customerrelationship_set")
-
-    logger.error("Queryset: %s", str(queryset.query))
 
     try:
         for field, value in filters.items():
@@ -329,12 +354,14 @@ def list_entries(request):
         logger.error("Error serializing data: %s", e)
         return JsonResponse({"error": "Error serializing data"}, status=500)
 
+    response_data = {
+        "page": page,
+        "total_pages": paginator.num_pages,
+        "total_items": paginator.count,
+        "results": results,
+    }
+    # Cache the response for 30 minutes
+    cache.set(cache_key, response_data, timeout=60 * 30)
+
     # Return JSON response
-    return JsonResponse(
-        {
-            "page": page,
-            "total_pages": paginator.num_pages,
-            "total_items": paginator.count,
-            "results": results,
-        }
-    )
+    return JsonResponse(response_data)

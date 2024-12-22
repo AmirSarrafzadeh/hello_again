@@ -36,7 +36,6 @@ This script defines a Django custom management command to populate the database 
 2. Run the command:
    ```bash
    python manage.py populate_db
-
 """
 import os
 import random
@@ -51,7 +50,7 @@ from loyalty_app.models import Address, AppUser, CustomerRelationship
 import warnings
 warnings.filterwarnings("ignore")
 
-number_of_records = 3_00
+number_of_records = 3_000_000
 # Initialize a logger for this module
 logger = logging.getLogger(__name__)
 log_file_size = 512 * 1024 * 1024  # 512 MB

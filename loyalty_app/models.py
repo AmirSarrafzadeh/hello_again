@@ -20,8 +20,10 @@ This code defines three Django models that represent a data structure for a CRM-
 
 This structure allows the representation of users, their addresses, and their associated relationships, making it suitable for a CRM system.
 """
-
+import warnings
+warnings.filterwarnings('ignore')
 from django.db import models
+from django.utils.timezone import now
 
 
 class Address(models.Model):
@@ -29,7 +31,7 @@ class Address(models.Model):
     street_number = models.CharField(max_length=10)
     city_code = models.CharField(max_length=10)
     city = models.CharField(max_length=100)
-    country = models.CharField(max_length=100)
+    country = models.CharField(max_length=100, db_index=True)
 
     class Meta:
         db_table = 'address'
@@ -47,10 +49,10 @@ class AppUser(models.Model):
     gender = models.CharField(max_length=6, choices=GENDER_CHOICES)
     customer_id = models.CharField(max_length=50, unique=True)
     phone_number = models.CharField(max_length=40, unique=True)
-    created = models.DateTimeField(null=False)
+    created = models.DateTimeField(null=False, default=now)
     address = models.ForeignKey(Address, on_delete=models.CASCADE)
-    birthday = models.DateField(null=False)
-    last_updated = models.DateTimeField(null=False)
+    birthday = models.DateField(null=False, default='2000-01-01')
+    last_updated = models.DateTimeField(null=False, default=now)
 
     class Meta:
         db_table = 'appuser'
@@ -59,9 +61,9 @@ class AppUser(models.Model):
 
 class CustomerRelationship(models.Model):
     appuser = models.ForeignKey(AppUser, on_delete=models.CASCADE)
-    points = models.IntegerField()
-    created = models.DateTimeField(null=False)
-    last_activity = models.DateTimeField(null=False)
+    points = models.IntegerField(db_index=True, default=0)
+    created = models.DateTimeField(null=False, default=now)
+    last_activity = models.DateTimeField(null=False, default=now)
 
     class Meta:
         db_table = 'customerrelationship'

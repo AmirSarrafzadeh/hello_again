@@ -40,6 +40,8 @@ The **Hello Again - Loyalty App** is a Django-based application designed to mana
 - Python 3.11.8
 - Django 5.4.1
 - PostgreSQL 17
+- Redis 5.0.14
+- Locust 2.32.4
 
 ### Steps
 1. Clone the repository:
@@ -98,5 +100,19 @@ The **Hello Again - Loyalty App** is a Django-based application designed to mana
   or if you have Make installed, you can use the following command:
     ```bash
     make pop
-    ```
+   ```
+---
+### Redis Notes
+- The app uses Redis for caching the responses.
+- You should have Redis installed on your machine.
+- The default port for Redis is 6379.
+- You can change the port in the settings.py file.
+- The cache timeout is set to 30 minutes in the settings.py file, you can change it to any number you want.
+---
+### Logs Notes
+- The app uses RotatingFileHandler for logging.
+- The logs are stored in the logs directory in the root of the project.
+- The Max Size of each log file is set to 512 MB with 5 backup files, you can change them as you want.
+- Each log file is named with the specific script name.
+
 # Developed with ❤️ by Amir 
