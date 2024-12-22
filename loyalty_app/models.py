@@ -25,7 +25,7 @@ from django.db import models
 
 
 class Address(models.Model):
-    street = models.CharField(max_length=255)
+    street = models.CharField(max_length=100)
     street_number = models.CharField(max_length=10)
     city_code = models.CharField(max_length=10)
     city = models.CharField(max_length=100)
@@ -43,14 +43,14 @@ class AppUser(models.Model):
         ('O', 'Other'),
     ]
     first_name = models.CharField(max_length=50)
-    last_name = models.CharField(max_length=50)
-    gender = models.CharField(max_length=1, choices=GENDER_CHOICES)
+    last_name = models.CharField(max_length=100)
+    gender = models.CharField(max_length=6, choices=GENDER_CHOICES)
     customer_id = models.CharField(max_length=50, unique=True)
-    phone_number = models.CharField(max_length=15, unique=True)
-    created = models.DateTimeField(auto_now_add=True)
+    phone_number = models.CharField(max_length=40, unique=True)
+    created = models.DateTimeField(blank=True, null=True)
     address = models.ForeignKey(Address, on_delete=models.CASCADE)
     birthday = models.DateField(blank=True, null=True)
-    last_updated = models.DateTimeField(auto_now=True)
+    last_updated = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         db_table = 'appuser'
@@ -60,8 +60,8 @@ class AppUser(models.Model):
 class CustomerRelationship(models.Model):
     appuser = models.ForeignKey(AppUser, on_delete=models.CASCADE)
     points = models.IntegerField()
-    created = models.DateTimeField(auto_now_add=True)
-    last_activity = models.DateTimeField()
+    created = models.DateTimeField(blank=True, null=True)
+    last_activity = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         db_table = 'customerrelationship'

@@ -66,16 +66,21 @@ file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 logger.setLevel(logging.DEBUG)
 
+
 def list_entries(request):
     """
     Lists entries from AppUser, Address, and CustomerRelationship.
-    Includes filtering, sorting, and pagination.
+    Includes filtering, sorting, and pagination with support for date filters and exact date queries.
     """
     logger.info("Incoming request to entries endpoint with parameters: %s", request.GET.dict())
 
     try:
-        # Get filter and sort parameters
-        filters = {key: value for key, value in request.GET.items() if key not in ["sort_by", "order", "page", "page_size"]}
+        # Extract filter and sort parameters
+        filters = {key: value for key, value in request.GET.items() if
+                   key not in ["sort_by", "order", "page", "page_size",
+                               "created", "created_after", "created_before",
+                               "last_updated", "last_updated_after", "last_updated_before",
+                               "last_activity", "last_activity_after", "last_activity_before"]}
         sort_by = request.GET.get("sort_by", "id")
         order = request.GET.get("order", "asc")
         page = int(request.GET.get("page", 1))
@@ -94,8 +99,9 @@ def list_entries(request):
         Prefetch("customerrelationship_set")
     )
 
-    # Apply filtering dynamically with case-insensitive exact match
+    # Apply filtering dynamically with case-insensitive exact match and date filters
     try:
+        # Standard filters
         for field, value in filters.items():
             if hasattr(AppUser, field):  # Check if AppUser has the field
                 queryset = queryset.filter(**{f"{field}__iexact": value})
@@ -106,6 +112,47 @@ def list_entries(request):
             elif hasattr(CustomerRelationship, field):  # Check if CustomerRelationship has the field
                 queryset = queryset.filter(**{f"customerrelationship__{field}__iexact": value})
                 logger.debug("Filtering CustomerRelationship by %s: %s", field, value)
+
+        # Date filters: Exact and Ranges
+        created = request.GET.get("created")
+        created_after = request.GET.get("created_after")
+        created_before = request.GET.get("created_before")
+        if created:
+            queryset = queryset.filter(created=created)
+            logger.debug("Filtering by exact created date: %s", created)
+        if created_after:
+            queryset = queryset.filter(created__gte=created_after)
+            logger.debug("Filtering by created_after: %s", created_after)
+        if created_before:
+            queryset = queryset.filter(created__lte=created_before)
+            logger.debug("Filtering by created_before: %s", created_before)
+
+        last_updated = request.GET.get("last_updated")
+        last_updated_after = request.GET.get("last_updated_after")
+        last_updated_before = request.GET.get("last_updated_before")
+        if last_updated:
+            queryset = queryset.filter(last_updated=last_updated)
+            logger.debug("Filtering by exact last_updated date: %s", last_updated)
+        if last_updated_after:
+            queryset = queryset.filter(last_updated__gte=last_updated_after)
+            logger.debug("Filtering by last_updated_after: %s", last_updated_after)
+        if last_updated_before:
+            queryset = queryset.filter(last_updated__lte=last_updated_before)
+            logger.debug("Filtering by last_updated_before: %s", last_updated_before)
+
+        last_activity = request.GET.get("last_activity")
+        last_activity_after = request.GET.get("last_activity_after")
+        last_activity_before = request.GET.get("last_activity_before")
+        if last_activity:
+            queryset = queryset.filter(customerrelationship__last_activity=last_activity)
+            logger.debug("Filtering by exact last_activity date: %s", last_activity)
+        if last_activity_after:
+            queryset = queryset.filter(customerrelationship__last_activity__gte=last_activity_after)
+            logger.debug("Filtering by last_activity_after: %s", last_activity_after)
+        if last_activity_before:
+            queryset = queryset.filter(customerrelationship__last_activity__lte=last_activity_before)
+            logger.debug("Filtering by last_activity_before: %s", last_activity_before)
+
     except Exception as e:
         logger.error("Error applying filters: %s", e)
         return JsonResponse({"error": "Error applying filters"}, status=400)
@@ -131,8 +178,13 @@ def list_entries(request):
                     "first_name": app_user.first_name,
                     "last_name": app_user.last_name,
                     "gender": app_user.gender,
+                    "customer_id": app_user.customer_id,
                     "phone_number": app_user.phone_number,
+                    "created": app_user.created,
+                    "birthday": app_user.birthday,
+                    "last_updated": app_user.last_updated,
                     "address": {
+                        "address_id": app_user.address.id,
                         "street": app_user.address.street,
                         "street_number": app_user.address.street_number,
                         "city_code": app_user.address.city_code,
@@ -141,6 +193,7 @@ def list_entries(request):
                     },
                     "customer_relationships": [
                         {
+                            "relationship_id": relationship.id,
                             "points": relationship.points,
                             "created": relationship.created,
                             "last_activity": relationship.last_activity,
@@ -150,7 +203,7 @@ def list_entries(request):
                 }
             )
     except Exception as e:
-        logger.error("Error in for loop in serializing data: %s", e)
+        logger.error("Error serializing data: %s", e)
         return JsonResponse({"error": "Error serializing data"}, status=500)
 
     # Return JSON response

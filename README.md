@@ -36,10 +36,10 @@ The **Hello Again - Loyalty App** is a Django-based application designed to mana
 
 ## Installation and Setup
 
-### Prerequisites
-- Python 3.8+
-- Django 4.0+
-- PostgreSQL
+### Used Technologies 
+- Python 3.11.8
+- Django 5.4.1
+- PostgreSQL 17
 
 ### Steps
 1. Clone the repository:
@@ -50,13 +50,53 @@ The **Hello Again - Loyalty App** is a Django-based application designed to mana
    ```bash
    cd hello_again
    ```
+3. If you would like to use a virtual environment, create and activate it:
+   ```bash
+   python -m venv venv
+   source venv/scripts/activate
+   ```
+4. If you have Make installed, you can use the following commands to install the dependencies and run the server:
+   ```bash
+   make install
+   make migrate
+   make make
+   make run
+    ```
+   in the case of needing help, you can use the following command:
+   ```bash
+    make help
+    ```
+5. If you don't have Make installed, you can install the dependencies manually:
+    ```bash
+    pip install -r requirements.txt
+    ```
+6. You should create a `.env` file in the root directory of the project and add the following variables:
+    It should include the credentials for the database connection and secret key for Django.
 
-   
+7. Run the server:
+   ```bash
+   python manage.py runserver
+   ```
+8. Open your browser and navigate to `http://127.0.0.1:8000/` to access the app.
 
+---
 
+### For more information, please refer to the [API Documentation](http://127.0.0.1:8000/api/docs).
 
+#### For checking the logs, you can navigate to the `logs` directory in the root of the project.
 
-
-
-
+---
+### Database Notes 
+- The database is PostgreSQL, and you should have it installed on your machine.
+- You should create a database named `hello_again` in your PostgreSQL.
+- If you want, you can use the populate_db.py for populating the database with some random data.
+- The number_of_records is set to 3_000_000 in the populate_db.py file, you can change it to any number you want.
+- For populating the database, you can run the following command:
+    ```bash
+    python manage.py populate_db
+    ```
+  or if you have Make installed, you can use the following command:
+    ```bash
+    make pop
+    ```
 # Developed with ❤️ by Amir 
